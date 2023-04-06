@@ -89,7 +89,7 @@ def save(initial_money, records):
         records = [[record[0], str(record[1])] for record in records]
         records = [" ".join(record) for record in records]
         for record in records:
-            file.writelines("%s\n" %record)
+            file.write("%s\n" %record)
         
 
 initial_money, records = initialize()   # initialize the amount of money and the record list
