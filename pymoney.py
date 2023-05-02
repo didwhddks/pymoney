@@ -1,109 +1,179 @@
 import sys
 import os
 
-def add(money, records):
-    # transform the input string into list of tuples
-    new_records = input("""Add some expense or income records with description and amount:
-desc1 amt1, desc2 amt2, desc3 amt3, ...\n""").split(", ")
-    new_records = [tuple(record.split()) for record in new_records]
+class Record:
+    """Represent a record"""
+    def __init__(self, category, description, amount):
+        self._category, self._description, self._amount = category, description, amount
 
-    # check if the input string conforms to the specified format
-    for record in new_records:
-        if len(record) != 2:
-            sys.stderr.write("The format of the records should be like this: breakfast -50, lunch -100, ...\nFail to add the records.\n")
-            return money, records
+    @property
+    def category(self):
+        return self._category
+    @property
+    def description(self):
+        return self._description
+    @property
+    def amount(self):
+        return self._amount
 
-    # try to add new records into the original records and calculate the balance
-    try:
-        records += [(desc, int(amt)) for desc, amt in new_records]
-        money += sum(int(amt) for desc, amt in new_records)
-    except ValueError:
-        sys.stderr.write("Invalid value for money.\nFail to add the records.\n")
-    finally:
-        return money, records
-
-def view(money, records):
-    # print the records
-    print("\nHere's your expense and income records: ")
-    print("%s%-20s %s\n%s%s %s" %(" "*2, "Description", "Amount", " "*2, "="*20, "="*20))
-    for i, (desc, amt) in enumerate(records):
-        print("%d %-20s %s" %(i+1, desc, amt))
-    print("%s%s %s" %(" "*2, "="*20, "="*20))
-    print("Now you have %d dollars." %money)
-
-def delete(money, records):
-    # first show the current records to the user
-    view(money, records)
-
-    # receive the input record number and try to delete the record and calculate the balance
-    try:
-        deleted = int(input("\nWhich record do you want to delete (Please enter the corresponding record number)? "))
-        money -= records[deleted-1][1]
-        del records[deleted-1]
-    except ValueError:
-        sys.stderr.write("Invalid format. Fail to delete a record.\n")
-    except IndexError:
-        sys.stderr.write("There's no record with the record number %d. Fail to delete a record.\n" %deleted)
-    finally:
-        return money, records
-
-def initialize():
-    try:
-        # try to open records.txt
-        fh = open("records.txt", "r")
-    except FileNotFoundError:
-        # try to receive the initial amount of money and initialize the record list if the file is not found.
-        try: 
-            records = []
-            money = int(input("How much money do you have? "))
-        except ValueError:
-            sys.stderr.write("Invalid value for money. Set to 0 by default.\n")
-            money = 0
-    else:
-        # the file is successfully opened. try to read the contents inside
+class Records:
+    def __init__(self):
         try:
-            money = int(fh.readline())
-            records = []
+            fh = open("records.txt", "r")
+            self._initial_money = int(fh.readline())
+            self._records = []
             for record in fh.readlines():
                 record = record.split()
-                if len(record) != 2:
+                if len(record) != 3:
                     raise
-                record = (record[0], int(record[1]))
-                records.append(record)
+                record = Record(record[0], record[1], int(record[2]))
+                self._records.append(record)
+        except FileNotFoundError:
+            # try to receive the initial amount of money and initialize the record list if the file is not found.
+            try: 
+                self._records = []
+                self._initial_money = int(input("How much money do you have? "))
+            except ValueError:
+                sys.stderr.write("Invalid value for money. Set to 0 by default.\n")
+                self._initial_money = 0
         except:
-            # the contents inside are invalid. remove the file and initialize again
             sys.stderr.write("Invalid format in records.txt. Deleting the contents.\n")
             fh.close()
             os.remove("records.txt")
-            money, records = initialize()
+            try: 
+                self._records = []
+                self._initial_money = int(input("How much money do you have? "))
+            except ValueError:
+                sys.stderr.write("Invalid value for money. Set to 0 by default.\n")
+                self._initial_money = 0
         else:
             print("Welcome back!")
             fh.close()
-    finally:
-        return money, records
+    
+    def add(self, record, categories):
+        record = [r.split() for r in record.split(", ")]
 
-def save(initial_money, records):
-    # write the records into the file records.txt
-    with open("records.txt", "w") as file:
-        file.write("%s\n" %str(initial_money))
-        records = [[record[0], str(record[1])] for record in records]
-        records = [" ".join(record) for record in records]
-        for record in records:
-            file.write("%s\n" %record)
-        
+        # check if the input string conforms to the specified format
+        for r in record:
+            if len(r) != 3:
+                sys.stderr.write("The format of the records should be like this: meal breakfast -50, income lottery 100, ...\nFail to add the records.\n")
+                return
+            if categories.is_category_valid(r[0]) == False:
+                sys.stderr.write("Some of the specified categories are not in the category list.\nYou can check the category list by command \"view categories\".\nFail to add the records.\n")
+                return
 
-initial_money, records = initialize()   # initialize the amount of money and the record list
+        # try to add new records into the original records and calculate the balance
+        try:
+            record = [Record(r[0], r[1], int(r[2])) for r in record]
+            self._records += record
+            self._initial_money += sum([r.amount for r in record])
+        except ValueError:
+            sys.stderr.write("Invalid value for money.\nFail to add the records.\n")
+
+    def view(self):
+        # print the records
+        print("\nHere's your expense and income records: ")
+        print("%3s %-15s %-20s %s" %("", "Category", "Description", "Amount"))
+        print("%3s %s %s %s" %("", "="*15, "="*20, "="*10))
+        for idx, record in enumerate(self._records):
+            print("%3d %-15s %-20s %s" %(idx+1, record.category, record.description, record.amount))
+        print("%3s %s %s %s" %("", "="*15, "="*20, "="*10))
+        print("%3s Now you have %d dollars." %("", self._initial_money))
+
+    def delete(self, delete_record):
+        try:
+            delete_record = int(delete_record)
+            self._initial_money -= self._records[delete_record-1].amount
+            del self._records[delete_record-1]
+        except ValueError:
+            sys.stderr.write("Invalid format. Fail to delete a record.\n")
+        except IndexError:
+            sys.stderr.write("There's no record with the record number %d. Fail to delete a record.\n" %delete_record)
+
+    def find(self, category, target_categories):
+        filter_records = list(filter(lambda record: record.category in target_categories, self._records))
+        total = sum([record.amount for record in filter_records])
+        print("\nHere's your expense and income records under category \"%s\": " %category)
+        print("%3s %-15s %-20s %s" %("", "Category", "Description", "Amount"))
+        print("%3s %s %s %s" %("", "="*15, "="*20, "="*10))
+        for idx, record in enumerate(filter_records):
+            print("%3d %-15s %-20s %s" %(idx+1, record.category, record.description, record.amount))
+        print("%3s %s %s %s" %("", "="*15, "="*20, "="*10))
+        print("%3s The total amount above is %d." %("", total))
+
+    def save(self):
+        # write the records into the file records.txt
+        with open("records.txt", "w") as fh:
+            fh.write("%s\n" %str(self._initial_money))
+            save_records = [[record.category, record.description, str(record.amount)] for record in self._records]
+            save_records = [" ".join(record)+"\n" for record in save_records]
+            fh.writelines(save_records)
+
+
+class Categories:
+    def __init__(self):
+        self._categories = ['expense', ['food', ['meal', 'snack', 'drink'], 'transportation', ['bus', 'railway']], 'income', ['salary', 'bonus']]
+
+    def view(self):
+        def recursive_view(categories, level=0):
+            for subcategory in categories:
+                if type(subcategory) == list:
+                    recursive_view(subcategory, level+1)
+                else:
+                    print("%s- %s" %(" "*4*level, subcategory))
+
+        recursive_view(self._categories)
+
+    def is_category_valid(self, category):
+        def recursive_check(category, categories):
+            for subcategory in categories:
+                if type(subcategory) == list and recursive_check(category, subcategory):
+                    return True
+                if category == subcategory:
+                    return True
+            return False
+
+        return recursive_check(category, self._categories)
+
+    def find_subcategories(self, category):
+        def find_subcategories_gen(category, categories, found=False):
+            if type(categories) == list:
+                for idx, subcategory in enumerate(categories):
+                    yield from find_subcategories_gen(category, subcategory, found)
+
+                    if subcategory == category and idx+1 < len(categories) and type(categories[idx+1]) == list:
+                        yield from find_subcategories_gen(category, categories[idx+1], True)
+            else:
+                if category == categories or found == True:
+                    yield categories
+
+        return [i for i in find_subcategories_gen(category, self._categories)]
+
+
+
+categories = Categories()
+records = Records()
 
 while True:
-    command = input("\nWhat do you want to do (add / view / delete / exit)? ")
+    command = input("""\nWhat do you want to do (add / view / delete / view categories / find / 
+exit)? """)
     if command == "add":
-        initial_money, records = add(initial_money, records)
+        record = input("Add some expense or income records with category, description and amount (separate by spaces):\ncat1 desc1 amt1, cat2 desc2 amt2, cat3 desc3 amt3, ...\n")
+        records.add(record, categories)
     elif command == "view":
-        view(initial_money, records)
+        records.view()
     elif command == "delete":
-        initial_money, records = delete(initial_money, records)
+        records.view()
+        delete_record = input("\nWhich record do you want to delete (Please enter the corresponding record number)? ")
+        records.delete(delete_record)
+    elif command == "view categories":
+        categories.view()
+    elif command == "find":
+        category = input("Which category do you want to find? ")
+        target_categories = categories.find_subcategories(category)
+        records.find(category, target_categories)
     elif command == "exit":
-        save(initial_money, records)
+        records.save()
         break
     else:
         sys.stderr.write("Invalid command. Try again.\n")
