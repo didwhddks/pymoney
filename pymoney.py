@@ -8,23 +8,54 @@ class Record:
 
     @property
     def category(self):
+        """
+        Get the value of the attribute self._category.
+
+        Arguments:
+        self._category -- category of the record
+
+        Returns:
+        self._category
+        """
+
         return self._category
     @property
     def description(self):
+        """
+        Get the value of the attribute self._description.
+
+        Arguments:
+        self._description -- description of the record
+
+        Returns:
+        self._description
+        """
+
         return self._description
     @property
     def amount(self):
+        """
+        Get the value of the attribute self._amount.
+
+        Arguments:
+        self._amount -- amount of the record
+
+        Returns:
+        self._amount
+        """
+
         return self._amount
 
 class Records:
-    def __init__(self):
+    """Maintain a list of all the 'Record's and the initial amount of money."""
+    def __init__(self, categories):
         try:
             fh = open("records.txt", "r")
             self._initial_money = int(fh.readline())
             self._records = []
             for record in fh.readlines():
                 record = record.split()
-                if len(record) != 3:
+                if len(record) != 3 or categories.is_category_valid(record[0]) == False:
                     raise
                 record = Record(record[0], record[1], int(record[2]))
                 self._records.append(record)
@@ -51,8 +82,20 @@ class Records:
             fh.close()
     
     def add(self, record, categories):
-        record = [r.split() for r in record.split(", ")]
+        """
+        Add the input records from the user into current record list and calculate the balance.
 
+        Arguments:
+        record -- input records from the user
+        categories -- predefined category
+        self._records -- current record list
+        self._initial_money -- current balance
+
+        Returns:
+        None
+        """
+
+        record = [r.split() for r in record.split(", ")]
         # check if the input string conforms to the specified format
         for r in record:
             if len(r) != 3:
@@ -61,7 +104,6 @@ class Records:
             if categories.is_category_valid(r[0]) == False:
                 sys.stderr.write("Some of the specified categories are not in the category list.\nYou can check the category list by command \"view categories\".\nFail to add the records.\n")
                 return
-
         # try to add new records into the original records and calculate the balance
         try:
             record = [Record(r[0], r[1], int(r[2])) for r in record]
@@ -71,6 +113,18 @@ class Records:
             sys.stderr.write("Invalid value for money.\nFail to add the records.\n")
 
     def view(self):
+        """
+        Show the balance and all of the records in the record list with their categories,
+        descriptions and amounts.
+
+        Arguments:
+        self._records -- current record list
+        self._initial_money -- current balance
+
+        Returns:
+        None
+        """
+
         # print the records
         print("\nHere's your expense and income records: ")
         print("%3s %-15s %-20s %s" %("", "Category", "Description", "Amount"))
@@ -81,6 +135,18 @@ class Records:
         print("%3s Now you have %d dollars." %("", self._initial_money))
 
     def delete(self, delete_record):
+        """
+        Delete the specified record from the record list and recalculate the balance.
+
+        Arguments:
+        delete_record -- record number of the deleted record
+        self._records -- current record list
+        self._initial_money -- current balance
+
+        Returns:
+        None
+        """
+
         try:
             delete_record = int(delete_record)
             self._initial_money -= self._records[delete_record-1].amount
@@ -111,27 +177,29 @@ class Records:
 
 
 class Categories:
+    """Maintain the category list and provide some methods."""
     def __init__(self):
         self._categories = ['expense', ['food', ['meal', 'snack', 'drink'], 'transportation', ['bus', 'railway']], 'income', ['salary', 'bonus']]
 
     def view(self):
         def recursive_view(categories, level=0):
-            for subcategory in categories:
-                if type(subcategory) == list:
+            if type(categories) == list:
+                for subcategory in categories:
                     recursive_view(subcategory, level+1)
-                else:
-                    print("%s- %s" %(" "*4*level, subcategory))
+            else:
+                print("%s- %s" %(" "*4*(level-1), categories))
 
         recursive_view(self._categories)
 
     def is_category_valid(self, category):
         def recursive_check(category, categories):
-            for subcategory in categories:
-                if type(subcategory) == list and recursive_check(category, subcategory):
-                    return True
-                if category == subcategory:
-                    return True
-            return False
+            if type(categories) == list:
+                for subcategory in categories:
+                    if recursive_check(category, subcategory):
+                        return True
+                return False
+            else:
+                return category == categories
 
         return recursive_check(category, self._categories)
 
@@ -152,7 +220,7 @@ class Categories:
 
 
 categories = Categories()
-records = Records()
+records = Records(categories)
 
 while True:
     command = input("""\nWhat do you want to do (add / view / delete / view categories / find / 
