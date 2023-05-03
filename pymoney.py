@@ -2,8 +2,16 @@ import sys
 import os
 
 class Record:
-    """Represent a record"""
     def __init__(self, category, description, amount):
+        """
+        Initialize a record.
+
+        Arguments:
+        category -- category of the record
+        description -- description of the record
+        amount -- amount of the record
+        """
+
         self._category, self._description, self._amount = category, description, amount
 
     @property
@@ -19,6 +27,7 @@ class Record:
         """
 
         return self._category
+
     @property
     def description(self):
         """
@@ -32,6 +41,7 @@ class Record:
         """
 
         return self._description
+
     @property
     def amount(self):
         """
@@ -47,8 +57,22 @@ class Record:
         return self._amount
 
 class Records:
-    """Maintain a list of all the 'Record's and the initial amount of money."""
     def __init__(self, categories):
+        """
+        Initialize the record list from the file "records.txt" or the user input.
+
+        Arguments:
+        categories -- the predefined nested category list
+        self._records -- record list
+        self._initial_money -- initial money
+
+        Raises:
+        FileNotFoundError -- if the file "records.txt" can not be successfully opened
+        ValueError -- if the balance or the amount of some of the records in "records.txt"
+                      or from the user can not be converted to number
+        Others -- if the formats of some of the records are incorrect
+        """
+
         try:
             fh = open("records.txt", "r")
             self._initial_money = int(fh.readline())
@@ -88,11 +112,14 @@ class Records:
         Arguments:
         record -- input records from the user
         categories -- predefined category
-        self._records -- current record list
+        self._records -- record list
         self._initial_money -- current balance
 
         Returns:
         None
+
+        Raises:
+        ValueError -- if the amount of some of the input records can not be converted to number
         """
 
         record = [r.split() for r in record.split(", ")]
@@ -118,7 +145,7 @@ class Records:
         descriptions and amounts.
 
         Arguments:
-        self._records -- current record list
+        self._records -- record list
         self._initial_money -- current balance
 
         Returns:
@@ -140,11 +167,15 @@ class Records:
 
         Arguments:
         delete_record -- record number of the deleted record
-        self._records -- current record list
+        self._records -- record list
         self._initial_money -- current balance
 
         Returns:
         None
+
+        Raises:
+        ValueError -- if the input record number can not be converted to number
+        IndexError -- if the input record number is out of bound
         """
 
         try:
@@ -157,6 +188,19 @@ class Records:
             sys.stderr.write("There's no record with the record number %d. Fail to delete a record.\n" %delete_record)
 
     def find(self, category, target_categories):
+        """
+        Show all of the records with the category in the target category list
+        and the total amount of the records.
+
+        Arguments:
+        category -- the category that the user would like to find
+        target_categories -- a list containing all of the subcategoires under the found category.
+        self._records -- record list
+
+        Returns:
+        None
+        """
+
         filter_records = list(filter(lambda record: record.category in target_categories, self._records))
         total = sum([record.amount for record in filter_records])
         print("\nHere's your expense and income records under category \"%s\": " %category)
@@ -168,6 +212,17 @@ class Records:
         print("%3s The total amount above is %d." %("", total))
 
     def save(self):
+        """
+        Save the information of the record list and the balance into the file "records.txt".
+
+        Arguments:
+        self._records -- record list
+        self._initial_money -- current balance
+
+        Returns:
+        None
+        """
+
         # write the records into the file records.txt
         with open("records.txt", "w") as fh:
             fh.write("%s\n" %str(self._initial_money))
@@ -177,11 +232,25 @@ class Records:
 
 
 class Categories:
-    """Maintain the category list and provide some methods."""
     def __init__(self):
+        """Predefine a nested category list."""
+
         self._categories = ['expense', ['food', ['meal', 'snack', 'drink'], 'transportation', ['bus', 'railway']], 'income', ['salary', 'bonus']]
 
     def view(self):
+        """
+        Show all of the categories in the predefined category list.
+
+        Inner functions:
+        recursive_view -- recursively print the subcategories under the category with indentation
+
+        Arguments:
+        self._categories -- predefined category list
+
+        Returns:
+        None
+        """
+
         def recursive_view(categories, level=0):
             if type(categories) == list:
                 for subcategory in categories:
@@ -192,6 +261,21 @@ class Categories:
         recursive_view(self._categories)
 
     def is_category_valid(self, category):
+        """
+        Check if a category is in the predefined category list.
+
+        Inner functions:
+        recursive_check -- recursively check if a category is in a nested category list
+
+        Arguments:
+        category -- the category that needs to be checked
+        self._categories -- predefined category list
+
+        Returns:
+        True -- if the category is exactly in the predefined category list
+        False -- otherwise
+        """
+
         def recursive_check(category, categories):
             if type(categories) == list:
                 for subcategory in categories:
@@ -204,6 +288,20 @@ class Categories:
         return recursive_check(category, self._categories)
 
     def find_subcategories(self, category):
+        """
+        Find all of the subcategories under the specified category.
+
+        Inner functions:
+        find_subcategories_gen -- a recursive generator to find all of the subcategories under the specified category
+
+        Arguments:
+        category -- the specified category
+        self._categories -- predefined category list
+
+        Returns:
+        target_categories -- a list containing all of the subcategoires under the specified category
+        """
+
         def find_subcategories_gen(category, categories, found=False):
             if type(categories) == list:
                 for idx, subcategory in enumerate(categories):
@@ -215,8 +313,8 @@ class Categories:
                 if category == categories or found == True:
                     yield categories
 
-        return [i for i in find_subcategories_gen(category, self._categories)]
-
+        target_categories = [i for i in find_subcategories_gen(category, self._categories)]
+        return target_categories
 
 
 categories = Categories()
